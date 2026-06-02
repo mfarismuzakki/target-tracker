@@ -99,21 +99,35 @@ tetap bisa dibuka walau sinyal lemah (data tetap perlu internet untuk sinkron).
 
 ---
 
-## D. Fase 2 — Update lewat Telegram (nanti)
+## D. Bot Telegram (update tracker dari chat)
 
-Jalur sudah disiapkan di `Code.gs` (`handleTelegram`). Saat siap, langkahnya:
+Fitur ini **sudah jadi** di `Code.gs`. Update Code.gs terbaru → **re-deploy (New version)** dulu, lalu:
 
-1. Chat **@BotFather** di Telegram → `/newbot` → dapat **token**.
-2. Simpan token di Apps Script: **Project Settings → Script properties** →
-   `TELEGRAM_TOKEN` = `token-dari-botfather`.
-3. Isi `telegram_chat_id` suami & istri di tab `Members` (dapatkan chat id dari bot, mis. via
-   @userinfobot) agar hanya kalian berdua yang bisa update.
-4. Set webhook (sekali) ke URL `/exec`:
-   `https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL_EXEC>`
-5. Lengkapi `handleTelegram()` untuk memproses perintah (mis. `/tilawah 4`, `/done angkat`,
-   `/catat ...`). **Pengingat harian** opsional via *Triggers (time-driven)* di Apps Script.
+1. **Buat bot.** Chat **@BotFather** → `/newbot` → ikuti → salin **token** (mis. `12345:ABC...`).
+2. **Simpan token.** Di editor Apps Script, jalankan fungsi:
+   `setTelegramToken('TOKEN-DARI-BOTFATHER')`
+3. **Daftarkan suami & istri.** Buka bot kalian, kirim pesan apa saja (mis. `/start`). Bot membalas
+   dengan **Chat ID** kamu. Lalu di editor jalankan (sesuai peran):
+   `setTelegramUser('suami', '123456789')` dan `setTelegramUser('istri', '987654321')`
+4. **Pasang webhook.** Jalankan (pakai URL `/exec` Web App Anda):
+   `setupTelegramWebhook('https://script.google.com/macros/s/AKfy.../exec')`
+   → balasan `{"ok":true,...}` berarti tersambung. (Otomatis menambah secret anti-spoof.)
+5. **Coba!** Kirim ke bot:
+   - `tilawah 4` atau `langkah 8500` → set nilai hari ini
+   - `/done dhuha` → tandai selesai
+   - `/tambah olahraga` → tambah 1
+   - `/catat Alhamdulillah lancar` → catatan harian
+   - `/hari` → lihat progres hari ini · `/bantuan` → daftar perintah
 
-Beri tahu saya saat ingin masuk Fase 2 — bagian ini akan saya kerjakan.
+   Bot mencocokkan kata kunci dengan target milik **pengirim** + target **Bersama**. Bila ambigu
+   (mis. `sholat`), bot minta lebih spesifik.
+
+6. **(Opsional) Pengingat harian.** Apps Script → **Triggers** (ikon jam) → *Add Trigger* →
+   fungsi `sendReminders`, *Time-driven → Day timer* (mis. 20.00–21.00). Set zona waktu proyek ke
+   **Asia/Jakarta** (Project Settings → Time zone). Bot akan mengingatkan target harian yg belum tuntas.
+
+> **Huawei Health / smartwatch:** tidak ada koneksi otomatis gratis. Praktiknya: lihat angka di
+> Huawei Health, lalu kirim cepat ke bot — mis. `langkah 9000`, `tidur 7`, `olahraga 30`.
 
 ---
 
