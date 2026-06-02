@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d9488" />
+  <meta name="description" content="Tracker target harian/pekanan/bulanan/tahunan keluarga." />
+  <title>Tracker Target Keluarga</title>
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Target Keluarga" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ============ LAYAR LOGIN ============ -->
+  <section id="login" class="login" hidden>
+    <div class="login-card">
+      <div class="login-logo">🎯</div>
+      <h1>Tracker Target Keluarga</h1>
+      <p class="muted">Masukkan PIN keluarga, lalu geser potongan untuk verifikasi.</p>
+      <form id="login-form" autocomplete="off">
+        <input id="pin-input" class="pin-input" type="password" inputmode="numeric"
+               placeholder="• • • •" aria-label="PIN keluarga" />
+        <div id="captcha" class="captcha-host"></div>
+        <button id="login-btn" type="submit" class="btn btn-primary btn-block" disabled>Masuk</button>
+      </form>
+      <p id="login-error" class="error" hidden></p>
+      <p id="login-hint" class="muted small" hidden></p>
+    </div>
+  </section>
+
+  <!-- ============ APLIKASI UTAMA ============ -->
+  <div id="app-main" hidden>
+    <header class="app-header">
+      <div class="app-header-row">
+        <h1 id="app-title">Hari Ini</h1>
+        <button id="menu-btn" class="icon-btn" title="Menu" aria-label="Menu">⚙️</button>
+      </div>
+      <div id="scope-tabs" class="scope-tabs" role="tablist"></div>
+    </header>
+
+    <main id="view" class="view"><!-- diisi oleh JS --></main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn" data-route="today">
+        <span class="nav-ico-wrap"><span class="nav-ico">📋</span></span>
+        <span class="nav-label">Hari Ini</span>
+      </button>
+      <button class="nav-btn" data-route="calendar">
+        <span class="nav-ico-wrap"><span class="nav-ico">📅</span></span>
+        <span class="nav-label">Kalender</span>
+      </button>
+      <button class="nav-btn" data-route="stats">
+        <span class="nav-ico-wrap"><span class="nav-ico">📊</span></span>
+        <span class="nav-label">Statistik</span>
+      </button>
+      <button class="nav-btn" data-route="targets">
+        <span class="nav-ico-wrap"><span class="nav-ico">🎯</span></span>
+        <span class="nav-label">Target</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============ OVERLAY: loader, modal, toast ============ -->
+  <div id="loader-bar" class="loader-bar"></div>
+  <div id="loader-overlay" class="loader-overlay" hidden>
+    <div class="loader-box">
+      <div class="spinner-lg"></div>
+      <p id="loader-text">Memuat…</p>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/hijri.js"></script>
+  <script src="js/captcha.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

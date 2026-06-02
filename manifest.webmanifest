@@ -1,0 +1,16 @@
+{
+  "name": "Tracker Target Keluarga",
+  "short_name": "Target Keluarga",
+  "description": "Pelacak target harian, pekanan, bulanan, dan tahunan untuk keluarga.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f9",
+  "theme_color": "#0d9488",
+  "lang": "id",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
