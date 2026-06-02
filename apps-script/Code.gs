@@ -239,6 +239,12 @@ function handleTelegram(update, params) {
     var secret = props().getProperty("TG_SECRET");
     if (secret && (!params || params.tgsecret !== secret)) return json({ ok: false });
 
+    // anti-loop: jangan proses update yang sama dua kali (Telegram bisa kirim ulang)
+    var uid = Number(update.update_id || 0);
+    var last = Number(props().getProperty("TG_LAST_UPDATE") || 0);
+    if (uid && uid <= last) return json({ ok: true }); // sudah diproses, abaikan
+    if (uid) props().setProperty("TG_LAST_UPDATE", String(uid));
+
     var msg = update.message || update.edited_message;
     if (!msg || !msg.text) return json({ ok: true });
     var chatId = String(msg.chat.id);
@@ -416,9 +422,15 @@ function setupTelegramWebhook(execUrl) {
   if (!secret) { secret = Utilities.getUuid().replace(/-/g, ""); props().setProperty("TG_SECRET", secret); }
   var base = execUrl || ScriptApp.getService().getUrl();
   base = base.replace(/\/dev$/, "/exec");
+  // mulai dari update terbaru: abaikan update lama (TG_LAST_UPDATE = 0 berarti proses semua baru)
+  props().setProperty("TG_LAST_UPDATE", "0");
   var res = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/setWebhook", {
     method: "post", contentType: "application/json",
-    payload: JSON.stringify({ url: base + "?tgsecret=" + secret, allowed_updates: ["message", "edited_message"] }),
+    payload: JSON.stringify({
+      url: base + "?tgsecret=" + secret,
+      allowed_updates: ["message", "edited_message"],
+      drop_pending_updates: true,   // buang antrean lama agar tak membanjir
+    }),
     muteHttpExceptions: true,
   });
   Logger.log(res.getContentText());
@@ -426,7 +438,10 @@ function setupTelegramWebhook(execUrl) {
 }
 function deleteTelegramWebhook() {
   var token = props().getProperty("TELEGRAM_TOKEN");
-  var res = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/deleteWebhook", { muteHttpExceptions: true });
+  var res = UrlFetchApp.fetch(
+    "https://api.telegram.org/bot" + token + "/deleteWebhook?drop_pending_updates=true",
+    { muteHttpExceptions: true });
+  Logger.log(res.getContentText());
   return res.getContentText();
 }
 
