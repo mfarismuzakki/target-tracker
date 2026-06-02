@@ -276,15 +276,30 @@
            <span class="val">${val}</span>
            <button data-act="d-inc" data-target="${t.id}" data-date="${date}">+</button>
          </div>`;
-    return `<div class="target" style="padding:.45rem 0;border-bottom:1px solid var(--border)">
+    return `<div class="target day-row">
         <div class="target-main">
           <div class="target-title">${esc(t.title)}</div>
-          <div class="target-meta">${esc(Store.memberName(t.owner))} · ${PERIOD_LABEL[t.period]} · target ${t.goal} ${esc(t.unit || "")}</div>
+          <div class="target-meta">${PERIOD_LABEL[t.period]} · target ${t.goal} ${esc(t.unit || "")}</div>
         </div>${control}
       </div>`;
   }
+  // target dikelompokkan per orang dengan separator
+  function daySection(date) {
+    const groups = [
+      { id: "suami",  label: Store.memberName("suami") },
+      { id: "istri",  label: Store.memberName("istri") },
+      { id: "shared", label: "Bersama" },
+    ];
+    let html = "";
+    for (const g of groups) {
+      const items = Store.activeTargets().filter(t => t.owner === g.id);
+      if (!items.length) continue;
+      html += `<div class="day-group"><div class="day-group-title">${esc(g.label)}</div>` +
+              items.map(t => dayRow(t, date)).join("") + `</div>`;
+    }
+    return html || `<p class="muted small">Belum ada target.</p>`;
+  }
   function dayModalHTML(date) {
-    const targets = Store.activeTargets();
     const notes = Store.notesForDate(date);
     const d = Store.parse(date);
     const evtInfo = Hijri.eventsForDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
@@ -311,7 +326,7 @@
       </div>
       ${islamicBanner}
       <div class="section-title">Target</div>
-      ${targets.map(t => dayRow(t, date)).join("")}
+      ${daySection(date)}
       <div class="section-title">Catatan</div>
       ${noteItems}
       <div class="field" style="margin-top:.7rem">

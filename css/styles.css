@@ -538,6 +538,20 @@ button { font: inherit; cursor: pointer; }
 }
 .note-item .note-text { flex: 1; white-space: pre-wrap; }
 
+/* grup target per orang di modal hari (dengan separator) */
+.day-group { padding-top: .5rem; margin-top: .5rem; border-top: 2px solid var(--border); }
+.day-group:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.day-group-title {
+  font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--teal); margin: .15rem 0 .35rem;
+  display: flex; align-items: center; gap: .4rem;
+}
+.day-group-title::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--teal);
+}
+.day-row { padding: .45rem 0; border-bottom: 1px solid var(--border); }
+.day-group .day-row:last-child { border-bottom: none; }
+
 /* ---------- Navigasi bawah ---------- */
 .bottom-nav {
   position: fixed;
@@ -736,9 +750,10 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 380px) { .stat-tiles { grid-template-columns: repeat(2, 1fr); } }
 
 /* grafik batang */
-.chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
-.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+.chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; width: 100%; }
+.chart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
 .chart-track { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.chart-lbl { overflow: hidden; }
 .chart-bar {
   width: 100%; min-height: 6px; border-radius: 5px 5px 3px 3px;
   background: linear-gradient(180deg, #5eead4, var(--teal));
