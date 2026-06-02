@@ -650,6 +650,34 @@ button { font: inherit; cursor: pointer; }
   margin: 0 auto;
 }
 
+/* ---------- State "menyimpan" saat CRUD ---------- */
+/* overlay + spinner pada kartu / baris yang sedang disinkronkan ke server */
+.saving { position: relative; pointer-events: none; }
+.saving::after {
+  content: ""; position: absolute; inset: 0; z-index: 4;
+  border-radius: inherit;
+  background: rgba(127, 127, 127, .12);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+}
+.saving::before {
+  content: ""; position: absolute; top: 50%; left: 50%; z-index: 5;
+  width: 24px; height: 24px; margin: -12px 0 0 -12px;
+  border: 3px solid rgba(127, 127, 127, .3);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+/* tombol dalam keadaan loading: teks disembunyikan, spinner di tengah */
+.btn-loading { position: relative; color: transparent !important; }
+.btn-loading::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  border: 2.5px solid rgba(255, 255, 255, .5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
 /* ===================================================================
    Statistik & Gamifikasi
    =================================================================== */

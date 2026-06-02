@@ -60,6 +60,15 @@
     if (_apiPending === 0) el.loaderBar.classList.remove("active");
   });
 
+  // tandai kartu/baris sedang menyimpan -> overlay spinner (dihapus saat re-render)
+  function setSaving(elm) { if (elm) elm.classList.add("saving"); }
+  // state loading pada tombol: sembunyikan teks + tampilkan spinner
+  function btnLoading(btn, on) {
+    if (!btn) return;
+    btn.disabled = on;
+    btn.classList.toggle("btn-loading", on);
+  }
+
   /* ---------------- boot & auth ---------------- */
   function mountCaptcha() {
     if (captchaCtl || !window.Captcha) return;
@@ -179,6 +188,7 @@
     const date = b.dataset.date;
 
     if (act === "inc" || act === "dec" || act === "toggle") {
+      setSaving(b.closest(".card"));
       guard(async () => { await changeLog(id, date, act); render(); });
     } else if (act === "day") {
       openDayModal(b.dataset.date);
@@ -193,6 +203,7 @@
     } else if (act === "del-target") {
       const t = Store.targetById(id);
       if (t && confirm(`Hapus target "${t.title}"? Semua catatannya ikut terhapus.`)) {
+        setSaving(b.closest(".card"));
         guard(async () => { await API.deleteTarget(id); Store.removeTarget(id); render(); toast("Target dihapus"); });
       }
     }
@@ -223,21 +234,24 @@
     if (act === "close-modal") closeModal();
     else if (act === "d-inc" || act === "d-dec" || act === "d-tog") {
       const mode = { "d-inc":"inc", "d-dec":"dec", "d-tog":"toggle" }[act];
+      setSaving(b.closest(".target"));
       guard(async () => { await changeLog(b.dataset.target, b.dataset.date, mode); refreshDayModal(); render(); });
     } else if (act === "add-note") {
       const date = b.dataset.date;
       const text = $("#note-text").value.trim();
       const member = $("#note-member").value;
       if (!text) return;
+      btnLoading(b, true);
       guard(async () => {
         const res = await API.addNote({ date, member, text });
         if (res && res.ok) Store.upsertNote(res.note);
         refreshDayModal(); render();
       });
     } else if (act === "del-note") {
+      setSaving(b.closest(".note-item"));
       guard(async () => { await API.deleteNote(b.dataset.id); Store.removeNote(b.dataset.id); refreshDayModal(); render(); });
     } else if (act === "save-target") {
-      saveTargetFromForm();
+      saveTargetFromForm(b);
     } else if (act === "logout") {
       API.clearPin(); closeModal(); location.reload();
     } else if (act === "reset-demo") {
@@ -349,7 +363,7 @@
     openModal = { type: "target" };
     showModal(html);
   }
-  function saveTargetFromForm() {
+  function saveTargetFromForm(btn) {
     const data = {
       title: $("#t-title").value.trim(),
       owner: $("#t-owner").value,
@@ -359,15 +373,18 @@
       unit: $("#t-unit").value.trim(),
     };
     if (!data.title) { toast("Judul wajib diisi"); return; }
+    btnLoading(btn, true);
     guard(async () => {
-      if (editingId) {
-        const res = await API.updateTarget(Object.assign({ id: editingId }, data));
-        if (res && res.ok) Store.upsertTarget(res.target);
-      } else {
-        const res = await API.addTarget(data);
-        if (res && res.ok) Store.upsertTarget(res.target);
-      }
-      closeModal(); render(); toast("Target disimpan");
+      try {
+        if (editingId) {
+          const res = await API.updateTarget(Object.assign({ id: editingId }, data));
+          if (res && res.ok) Store.upsertTarget(res.target);
+        } else {
+          const res = await API.addTarget(data);
+          if (res && res.ok) Store.upsertTarget(res.target);
+        }
+        closeModal(); render(); toast("Target disimpan");
+      } finally { btnLoading(btn, false); }
     });
   }
 
