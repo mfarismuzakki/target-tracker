@@ -232,6 +232,14 @@ function constEq(a, b) {
 
 /* ===================== TELEGRAM ===================== */
 var TG_TZ = "Asia/Jakarta"; // zona waktu untuk batas "hari" via Telegram
+// Nama anggota untuk balasan bot (samakan dengan MEMBERS di js/config.js)
+var MEMBER_NAMES = { suami: "Faris", istri: "Indana" };
+function tgName(owner) { return owner === "shared" ? "Bersama" : (MEMBER_NAMES[owner] || owner); }
+function tgRoleFromName(name) {
+  var n = String(name || "").toLowerCase().trim();
+  for (var role in MEMBER_NAMES) if (MEMBER_NAMES[role].toLowerCase() === n) return role;
+  return null;
+}
 
 function handleTelegram(update, params) {
   try {
@@ -250,11 +258,15 @@ function handleTelegram(update, params) {
     var chatId = String(msg.chat.id);
     var text = String(msg.text).trim();
 
+    // pendaftaran mandiri pakai nama + PIN keluarga (boleh sebelum terdaftar)
+    if (/^\/?daftar\b/i.test(text)) { tgSend(chatId, tgRegister(text, chatId)); return json({ ok: true }); }
+
     var owner = tgMemberByChat(chatId);
     if (!owner) {
-      tgSend(chatId, "Assalamu'alaikum 👋\nChat ID kamu: " + chatId +
-        "\n\nMinta admin mendaftarkan dengan menjalankan di Apps Script:\n" +
-        "setTelegramUser('suami','" + chatId + "')\natau\nsetTelegramUser('istri','" + chatId + "')");
+      tgSend(chatId, "Assalamu'alaikum 👋\nDaftarkan dirimu dulu dengan mengetik:\n\n" +
+        "*/daftar " + MEMBER_NAMES.suami + " <PIN>*  — jika kamu " + MEMBER_NAMES.suami + "\n" +
+        "*/daftar " + MEMBER_NAMES.istri + " <PIN>*  — jika kamu " + MEMBER_NAMES.istri + "\n\n" +
+        "(PIN = PIN keluarga yang dipakai login aplikasi)");
       return json({ ok: true });
     }
 
@@ -338,7 +350,18 @@ function tgToday(owner) {
     return (p.done ? "✅" : "▫️") + " " + t.title + (t.owner === "shared" ? " (Bersama)" : "") +
       " — " + p.total + "/" + p.goal + " " + (t.unit || "");
   });
-  return "📋 Progres hari ini (" + date + "):\n" + lines.join("\n");
+  return "📋 Progres harian " + tgName(owner) + " (" + date + "):\n" + lines.join("\n");
+}
+
+function tgRegister(text, chatId) {
+  var parts = text.replace(/^\/?daftar\s*/i, "").trim().split(/\s+/);
+  var name = parts[0] || "", pin = parts[1] || "";
+  if (!name || !pin) return "Format: /daftar <Nama> <PIN>\nContoh: /daftar " + MEMBER_NAMES.suami + " 1234";
+  if (!checkPin(pin)) return "❌ PIN salah. Coba lagi: /daftar <Nama> <PIN>";
+  var role = tgRoleFromName(name);
+  if (!role) return "❌ Nama harus " + MEMBER_NAMES.suami + " atau " + MEMBER_NAMES.istri + ".";
+  props().setProperty(role === "suami" ? "TG_SUAMI" : "TG_ISTRI", String(chatId).trim());
+  return "✅ Terdaftar sebagai *" + tgName(role) + "*.\nCoba ketik /hari atau langsung: tilawah 4";
 }
 
 /* ---- helper Telegram ---- */

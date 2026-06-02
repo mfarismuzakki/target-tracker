@@ -111,9 +111,10 @@ Fitur ini **sudah jadi** di `Code.gs`. Update Code.gs terbaru → **re-deploy (N
    `setupTelegramWebhook('https://script.google.com/macros/s/AKfy.../exec')`
    → cek Execution log: `{"ok":true,"result":true,"description":"Webhook was set"}`.
    (Otomatis menambah secret anti-spoof. Pastikan Code.gs sudah di-**deploy New version**.)
-4. **Daftarkan suami & istri.** Sekarang buka bot, kirim `/start`. Bot membalas dengan **Chat ID**
-   kamu. Lalu di editor jalankan (sesuai peran):
-   `setTelegramUser('suami', '123456789')` dan `setTelegramUser('istri', '987654321')`
+4. **Daftar lewat bot (pakai nama + PIN).** Buka bot, ketik:
+   `/daftar Faris <PIN>`  (jika kamu Faris) atau `/daftar Indana <PIN>`  (jika kamu Indana) —
+   `<PIN>` = PIN keluarga aplikasi. Bot balas "✅ Terdaftar sebagai …".
+   _(Alternatif manual di editor: `setTelegramUser('suami', '123…')` / `setTelegramUser('istri', '987…')`.)_
 5. **Coba!** Kirim ke bot:
    - `tilawah 4` atau `langkah 8500` → set nilai hari ini
    - `/done dhuha` → tandai selesai
