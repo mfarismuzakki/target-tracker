@@ -31,23 +31,25 @@
     const today = Store.today();
     const p = Store.progress(t, today);
     const todayVal = Store.logValue(t.id, today);
-    const isDailyCheck = t.type === "checkbox" && t.period === "daily";
+    const isCheck = t.type === "checkbox";
+    const isDailyCheck = isCheck && t.period === "daily";
 
     let meta;
     if (isDailyCheck) meta = p.done ? "Sudah dikerjakan hari ini" : "Belum dikerjakan hari ini";
     else meta = `${SCOPE_LABEL[t.period]}: <b>${p.total}</b> / ${p.goal} ${esc(t.unit || "")}`;
 
     let control;
-    if (isDailyCheck) {
+    if (isCheck) {
       const on = todayVal >= 1;
       control = `<button class="check ${on ? "on" : ""}" data-act="toggle"
                    data-target="${t.id}" data-date="${today}" aria-label="tandai">✓</button>`;
     } else {
-      control = `<div class="stepper">
-          <button data-act="dec" data-target="${t.id}" data-date="${today}" aria-label="kurangi">−</button>
-          <span class="val">${todayVal}</span>
-          <button data-act="inc" data-target="${t.id}" data-date="${today}" aria-label="tambah">+</button>
-        </div>`;
+      // target numerik: ketik angka langsung (sekali simpan)
+      control = `<label class="num-control">
+          <input class="num-input" type="number" inputmode="decimal" min="0" step="any"
+                 value="${todayVal}" data-target="${t.id}" data-date="${today}" aria-label="nilai hari ini" />
+          ${t.unit ? `<span class="num-unit">${esc(t.unit)}</span>` : ""}
+        </label>`;
     }
 
     const pctLabel = isDailyCheck

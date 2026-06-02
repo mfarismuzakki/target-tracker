@@ -156,7 +156,11 @@
     else el.view.innerHTML = UI.targetsView();
   }
   function setRoute(r) { Store.route = r; render(); }
-  function setScope(s) { Store.scope = s; render(); }
+  function setScope(s) {
+    Store.scope = s;
+    try { localStorage.setItem("tt_scope", s); } catch (e) {}
+    render();
+  }
 
   /* ---------------- perubahan log ---------------- */
   async function setLogValue(targetId, date, value) {
@@ -177,6 +181,20 @@
     else if (mode === "dec") next = cur - 1;
     else if (mode === "toggle") next = cur >= 1 ? 0 : 1;
     await setLogValue(targetId, date, next);
+  }
+  // simpan nilai dari input angka (target numerik) — sekali simpan
+  function commitNum(inp, isModal) {
+    const id = inp.dataset.target, date = inp.dataset.date;
+    let v = parseFloat(String(inp.value).replace(",", "."));
+    if (isNaN(v) || v < 0) v = 0;
+    if (v === Store.logValue(id, date)) return; // tak berubah
+    setSaving(inp.closest(".card") || inp.closest(".target"));
+    guard(async () => { await setLogValue(id, date, v); if (isModal) refreshDayModal(); render(); });
+  }
+  function onNumKeydown(e) {
+    if (e.key === "Enter" && e.target.classList && e.target.classList.contains("num-input")) {
+      e.preventDefault(); e.target.blur();
+    }
   }
 
   /* ---------------- event: konten utama ---------------- */
@@ -208,6 +226,12 @@
       }
     }
   });
+
+  el.view.addEventListener("change", (e) => {
+    const inp = e.target.closest && e.target.closest(".num-input");
+    if (inp) commitNum(inp, false);
+  });
+  el.view.addEventListener("keydown", onNumKeydown);
 
   el.scopeTabs.addEventListener("click", (e) => {
     const b = e.target.closest("[data-scope]");
@@ -258,6 +282,11 @@
       API._resetMock(); closeModal(); guard(tryLoad); toast("Data demo direset");
     }
   });
+  el.modalRoot.addEventListener("change", (e) => {
+    const inp = e.target.closest && e.target.closest(".num-input");
+    if (inp) commitNum(inp, true);
+  });
+  el.modalRoot.addEventListener("keydown", onNumKeydown);
 
   /* ---------- modal: detail hari (kalender) ---------- */
   function openDayModal(date) { openModal = { type: "day", date }; refreshDayModal(); }
@@ -267,15 +296,15 @@
   }
   function dayRow(t, date) {
     const val = Store.logValue(t.id, date);
-    const isDailyCheck = t.type === "checkbox" && t.period === "daily";
-    const control = isDailyCheck
+    const isCheck = t.type === "checkbox";
+    const control = isCheck
       ? `<button class="check ${val >= 1 ? "on" : ""}" data-act="d-tog"
            data-target="${t.id}" data-date="${date}">✓</button>`
-      : `<div class="stepper">
-           <button data-act="d-dec" data-target="${t.id}" data-date="${date}">−</button>
-           <span class="val">${val}</span>
-           <button data-act="d-inc" data-target="${t.id}" data-date="${date}">+</button>
-         </div>`;
+      : `<label class="num-control">
+           <input class="num-input" type="number" inputmode="decimal" min="0" step="any"
+                  value="${val}" data-target="${t.id}" data-date="${date}" />
+           ${t.unit ? `<span class="num-unit">${esc(t.unit)}</span>` : ""}
+         </label>`;
     return `<div class="target day-row">
         <div class="target-main">
           <div class="target-title">${esc(t.title)}</div>

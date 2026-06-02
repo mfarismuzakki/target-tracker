@@ -13,8 +13,9 @@
     logs: [],
     notes: [],
 
-    scope: "suami",            // suami | istri | shared
-    route: "today",            // today | calendar | targets
+    scope: (["suami", "istri", "shared"].indexOf(localStorage.getItem("tt_scope")) >= 0
+            ? localStorage.getItem("tt_scope") : "suami"),  // diingat antar refresh
+    route: "today",            // today | calendar | stats | targets
     cal: { y: 0, m: 0 },       // kursor bulan kalender (m: 0-11)
 
     /* ---------- util tanggal ---------- */

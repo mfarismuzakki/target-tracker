@@ -388,6 +388,22 @@ button { font: inherit; cursor: pointer; }
 }
 .check:active { transform: scale(.9); }
 
+/* input angka untuk target numerik (ketik langsung, sekali simpan) */
+.num-control { display: inline-flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+.num-input {
+  width: 66px; padding: .5rem .35rem;
+  border: 1.5px solid var(--border); border-radius: 11px;
+  background: var(--bg); color: var(--text);
+  font-size: 1.15rem; font-weight: 800; text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield; appearance: textfield;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.num-input:focus { outline: none; border-color: var(--teal); background: var(--card); box-shadow: 0 0 0 3px rgba(13,148,136,.18); }
+.num-unit { font-size: .72rem; color: var(--muted); max-width: 50px; line-height: 1.1; }
+
 .pill {
   display: inline-block;
   font-size: .72rem;

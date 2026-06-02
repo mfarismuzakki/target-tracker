@@ -54,7 +54,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) { body = {}; }
 
   // ---- Fase 2: webhook Telegram (update punya field update_id) ----
-  if (body && body.update_id) return handleTelegram(body);
+  if (body && body.update_id) return handleTelegram(body, (e && e.parameter) || {});
 
   if (!checkPin(body.pin)) return json({ ok: false, error: "auth" });
   try {
@@ -230,14 +230,224 @@ function constEq(a, b) {
   return r === 0;
 }
 
-/* ===================== FASE 2: TELEGRAM (stub) ===================== */
-function handleTelegram(update) {
-  // Akan diisi di Fase 2:
-  //  - ambil TELEGRAM_TOKEN dari Script Properties
-  //  - verifikasi update.message.chat.id ada di tab Members (telegram_chat_id)
-  //  - parse perintah (mis. "/tilawah 4") lalu setLog(...) ke Sheet
-  //  - balas pesan via Telegram Bot API
-  return json({ ok: true });
+/* ===================== TELEGRAM ===================== */
+var TG_TZ = "Asia/Jakarta"; // zona waktu untuk batas "hari" via Telegram
+
+function handleTelegram(update, params) {
+  try {
+    // anti-spoof: jika TG_SECRET sudah di-set, URL webhook wajib membawanya
+    var secret = props().getProperty("TG_SECRET");
+    if (secret && (!params || params.tgsecret !== secret)) return json({ ok: false });
+
+    var msg = update.message || update.edited_message;
+    if (!msg || !msg.text) return json({ ok: true });
+    var chatId = String(msg.chat.id);
+    var text = String(msg.text).trim();
+
+    var owner = tgMemberByChat(chatId);
+    if (!owner) {
+      tgSend(chatId, "Assalamu'alaikum 👋\nChat ID kamu: " + chatId +
+        "\n\nMinta admin mendaftarkan dengan menjalankan di Apps Script:\n" +
+        "setTelegramUser('suami','" + chatId + "')\natau\nsetTelegramUser('istri','" + chatId + "')");
+      return json({ ok: true });
+    }
+
+    tgSend(chatId, tgHandleCommand(owner, text));
+    return json({ ok: true });
+  } catch (err) {
+    return json({ ok: false, error: String(err) });
+  }
+}
+
+function tgHandleCommand(owner, text) {
+  var cmd, rest = "";
+  if (text.charAt(0) === "/") {
+    var sp = text.indexOf(" ");
+    cmd = (sp < 0 ? text : text.slice(0, sp)).slice(1).toLowerCase().split("@")[0];
+    rest = (sp < 0 ? "" : text.slice(sp + 1)).trim();
+  } else if (/^(.+?)\s+(-?\d+(?:[.,]\d+)?)$/.test(text)) {
+    cmd = "log"; rest = text;            // shorthand: "tilawah 4"
+  } else {
+    cmd = "help";
+  }
+
+  if (cmd === "start" || cmd === "help" || cmd === "bantuan") return tgHelp();
+  if (cmd === "hari" || cmd === "today" || cmd === "list") return tgToday(owner);
+  if (cmd === "catat" || cmd === "note") {
+    if (!rest) return "Tulis catatannya, mis: /catat Alhamdulillah lancar hari ini";
+    addNote({ date: tgDate(), member: owner, text: rest });
+    return "📝 Catatan tersimpan untuk hari ini.";
+  }
+  if (["log", "set", "done", "selesai", "tambah"].indexOf(cmd) >= 0) return tgLog(owner, cmd, rest);
+  return "Perintah tidak dikenal. Ketik /bantuan untuk daftar perintah.";
+}
+
+function tgLog(owner, cmd, rest) {
+  var keyword = rest, value = null;
+  var m = rest.match(/^(.*?)\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+  if (m) { keyword = m[1].trim(); value = parseFloat(m[2].replace(",", ".")); }
+
+  var matches = tgFindTargets(owner, keyword);
+  if (!matches.length) return "❌ Target \"" + keyword + "\" tidak ditemukan.\nKetik /hari untuk daftar target.";
+  if (matches.length > 1) {
+    return "Beberapa target cocok, sebutkan lebih spesifik:\n" +
+      matches.map(function (t) { return "• " + t.title; }).join("\n");
+  }
+
+  var t = matches[0], date = tgDate(), cur = tgDayValue(t.id, date), newVal;
+  if (cmd === "done" || cmd === "selesai") newVal = Number(t.goal) || 1;
+  else if (cmd === "tambah") newVal = cur + (value == null ? 1 : value);
+  else { // log / set
+    if (value == null) return "Sebutkan angkanya, mis: " + (t.title.split(" ")[0].toLowerCase()) + " 4";
+    newVal = value;
+  }
+  if (newVal < 0) newVal = 0;
+  setLog({ target_id: t.id, date: date, value: newVal });
+
+  var p = tgProgress(t, date);
+  return "✅ " + t.title + (t.owner === "shared" ? " (Bersama)" : "") +
+    "\n" + tgScopeLabel(t.period) + ": " + p.total + "/" + p.goal + " " + (t.unit || "") +
+    " — " + p.percent + "%" + (p.done ? " ✔️ tercapai!" : "");
+}
+
+function tgHelp() {
+  return "🎯 *Tracker Target Keluarga*\n\n" +
+    "Catat amal cukup ketik:\n" +
+    "• `<nama> <angka>` — mis: tilawah 4, langkah 8500, tidur 7\n" +
+    "• `/done <nama>` — tandai selesai (mis: /done dhuha)\n" +
+    "• `/tambah <nama> [angka]` — tambah nilai (mis: /tambah olahraga)\n" +
+    "• `/catat <teks>` — catatan harian\n" +
+    "• `/hari` — lihat progres hari ini\n" +
+    "• `/bantuan` — bantuan ini";
+}
+
+function tgToday(owner) {
+  var date = tgDate();
+  var ts = tgFindTargets(owner, "");
+  if (!ts.length) return "Belum ada target.";
+  var ord = { daily: 0, weekly: 1, monthly: 2, yearly: 3 };
+  ts.sort(function (a, b) { return (ord[a.period] - ord[b.period]) || (Number(a.sort) - Number(b.sort)); });
+  var lines = ts.map(function (t) {
+    var p = tgProgress(t, date);
+    return (p.done ? "✅" : "▫️") + " " + t.title + (t.owner === "shared" ? " (Bersama)" : "") +
+      " — " + p.total + "/" + p.goal + " " + (t.unit || "");
+  });
+  return "📋 Progres hari ini (" + date + "):\n" + lines.join("\n");
+}
+
+/* ---- helper Telegram ---- */
+function tgMemberByChat(chatId) {
+  var p = props();
+  if (String(p.getProperty("TG_SUAMI") || "") === String(chatId)) return "suami";
+  if (String(p.getProperty("TG_ISTRI") || "") === String(chatId)) return "istri";
+  return null;
+}
+function tgFindTargets(owner, keyword) {
+  var k = (keyword || "").toLowerCase().trim();
+  var ts = readAll("Targets").filter(function (t) {
+    return !isFalse(t.active) && (t.owner === owner || t.owner === "shared");
+  });
+  return k ? ts.filter(function (t) { return String(t.title).toLowerCase().indexOf(k) >= 0; }) : ts;
+}
+function tgDayValue(id, date) {
+  var logs = readAll("Logs");
+  for (var i = 0; i < logs.length; i++)
+    if (String(logs[i].target_id) === String(id) && toYmd(logs[i].date) === date) return Number(logs[i].value) || 0;
+  return 0;
+}
+function tgProgress(t, date) {
+  var w = tgPeriodWindow(t.period, date), logs = readAll("Logs"), total = 0;
+  for (var i = 0; i < logs.length; i++) {
+    var l = logs[i];
+    if (String(l.target_id) === String(t.id)) {
+      var d = toYmd(l.date);
+      if (d >= w.start && d <= w.end) total += Number(l.value) || 0;
+    }
+  }
+  var goal = Number(t.goal) || 0;
+  return { total: total, goal: goal, percent: goal ? Math.min(100, Math.round(total / goal * 100)) : 0, done: total >= goal };
+}
+function tgPeriodWindow(period, refStr) {
+  var pr = refStr.split("-");
+  var ref = new Date(Number(pr[0]), Number(pr[1]) - 1, Number(pr[2]));
+  var start, end;
+  if (period === "weekly") {
+    var off = (ref.getDay() - 1 + 7) % 7; // pekan mulai Senin
+    start = new Date(ref); start.setDate(ref.getDate() - off);
+    end = new Date(start); end.setDate(start.getDate() + 6);
+  } else if (period === "monthly") {
+    start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+  } else if (period === "yearly") {
+    start = new Date(ref.getFullYear(), 0, 1);
+    end = new Date(ref.getFullYear(), 11, 31);
+  } else { start = new Date(ref); end = new Date(ref); }
+  return { start: fmtYmd_(start), end: fmtYmd_(end) };
+}
+function fmtYmd_(d) { var m = d.getMonth() + 1, day = d.getDate(); return d.getFullYear() + "-" + (m < 10 ? "0" + m : m) + "-" + (day < 10 ? "0" + day : day); }
+function tgDate() { return Utilities.formatDate(new Date(), TG_TZ, "yyyy-MM-dd"); }
+function tgScopeLabel(period) { return { daily: "Hari ini", weekly: "Pekan ini", monthly: "Bulan ini", yearly: "Tahun ini" }[period] || ""; }
+function tgSend(chatId, text) {
+  var token = props().getProperty("TELEGRAM_TOKEN");
+  if (!token) return;
+  UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
+    method: "post", contentType: "application/json",
+    payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: "Markdown" }),
+    muteHttpExceptions: true,
+  });
+}
+
+/* ---- pengaturan Telegram (jalankan manual di editor) ---- */
+function setTelegramToken(token) {
+  if (!token) throw new Error("Token dari BotFather wajib diisi.");
+  props().setProperty("TELEGRAM_TOKEN", String(token).trim());
+  return "OK — token tersimpan.";
+}
+function setTelegramUser(role, chatId) {
+  if (role !== "suami" && role !== "istri") throw new Error("role harus 'suami' atau 'istri'.");
+  props().setProperty(role === "suami" ? "TG_SUAMI" : "TG_ISTRI", String(chatId).trim());
+  return "OK — " + role + " terdaftar.";
+}
+// Jalankan dengan URL /exec Web App, mis: setupTelegramWebhook('https://script.google.com/macros/s/AKfy.../exec')
+function setupTelegramWebhook(execUrl) {
+  var token = props().getProperty("TELEGRAM_TOKEN");
+  if (!token) throw new Error("Jalankan setTelegramToken('...') dulu.");
+  var secret = props().getProperty("TG_SECRET");
+  if (!secret) { secret = Utilities.getUuid().replace(/-/g, ""); props().setProperty("TG_SECRET", secret); }
+  var base = execUrl || ScriptApp.getService().getUrl();
+  base = base.replace(/\/dev$/, "/exec");
+  var res = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/setWebhook", {
+    method: "post", contentType: "application/json",
+    payload: JSON.stringify({ url: base + "?tgsecret=" + secret, allowed_updates: ["message", "edited_message"] }),
+    muteHttpExceptions: true,
+  });
+  Logger.log(res.getContentText());
+  return res.getContentText();
+}
+function deleteTelegramWebhook() {
+  var token = props().getProperty("TELEGRAM_TOKEN");
+  var res = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/deleteWebhook", { muteHttpExceptions: true });
+  return res.getContentText();
+}
+
+/* Pengingat harian (opsional) — pasang time-driven trigger ke fungsi ini */
+function sendReminders() {
+  var date = tgDate();
+  ["suami", "istri"].forEach(function (role) {
+    var chatId = props().getProperty(role === "suami" ? "TG_SUAMI" : "TG_ISTRI");
+    if (!chatId) return;
+    var pending = tgFindTargets(role, "").filter(function (t) {
+      return t.period === "daily" && !tgProgress(t, date).done;
+    });
+    if (!pending.length) {
+      tgSend(chatId, "🌟 MasyaAllah, semua target harianmu sudah tercapai. Barakallahu fiik!");
+    } else {
+      tgSend(chatId, "⏰ Pengingat target harian:\n" + pending.map(function (t) {
+        var p = tgProgress(t, date);
+        return "▫️ " + t.title + " (" + p.total + "/" + p.goal + " " + (t.unit || "") + ")";
+      }).join("\n"));
+    }
+  });
 }
 
 /* ===================== UTIL ===================== */
