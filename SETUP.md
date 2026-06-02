@@ -106,12 +106,14 @@ Fitur ini **sudah jadi** di `Code.gs`. Update Code.gs terbaru → **re-deploy (N
 1. **Buat bot.** Chat **@BotFather** → `/newbot` → ikuti → salin **token** (mis. `12345:ABC...`).
 2. **Simpan token.** Di editor Apps Script, jalankan fungsi:
    `setTelegramToken('TOKEN-DARI-BOTFATHER')`
-3. **Daftarkan suami & istri.** Buka bot kalian, kirim pesan apa saja (mis. `/start`). Bot membalas
-   dengan **Chat ID** kamu. Lalu di editor jalankan (sesuai peran):
-   `setTelegramUser('suami', '123456789')` dan `setTelegramUser('istri', '987654321')`
-4. **Pasang webhook.** Jalankan (pakai URL `/exec` Web App Anda):
+3. **Pasang webhook DULU** (penting: bot tidak akan membalas sebelum ini). Jalankan dengan URL
+   `/exec` Web App Anda:
    `setupTelegramWebhook('https://script.google.com/macros/s/AKfy.../exec')`
-   → balasan `{"ok":true,...}` berarti tersambung. (Otomatis menambah secret anti-spoof.)
+   → cek Execution log: `{"ok":true,"result":true,"description":"Webhook was set"}`.
+   (Otomatis menambah secret anti-spoof. Pastikan Code.gs sudah di-**deploy New version**.)
+4. **Daftarkan suami & istri.** Sekarang buka bot, kirim `/start`. Bot membalas dengan **Chat ID**
+   kamu. Lalu di editor jalankan (sesuai peran):
+   `setTelegramUser('suami', '123456789')` dan `setTelegramUser('istri', '987654321')`
 5. **Coba!** Kirim ke bot:
    - `tilawah 4` atau `langkah 8500` → set nilai hari ini
    - `/done dhuha` → tandai selesai

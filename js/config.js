@@ -8,7 +8,7 @@ window.APP_CONFIG = {
 
   // Setelah men-deploy Apps Script sebagai Web App, tempel URL "/exec"-nya
   // di sini. Contoh: "https://script.google.com/macros/s/AKfy....../exec"
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxVTC5Fd6ku-t5IZDpPpAHavYRdHBC8-Jv0W6D8_AiRAhKHSzAbciJRswERZHdxAz2i/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxJHNAWYHU6fkyW9ErDY5iZz7e7wtDy8rGP8kKOs0hMXYYekjq3nh8Bc2H70cCAhBt5/exec",
 
   // true  = MODE DEMO. Aplikasi memakai data contoh di perangkat (tanpa
   //         backend Google). Cocok untuk mencoba tampilan. PIN apa saja diterima.
